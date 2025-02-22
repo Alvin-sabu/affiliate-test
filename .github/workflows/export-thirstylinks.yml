@@ -1,0 +1,51 @@
+name: Export ThirstyLinks and Commit to Git
+
+on:
+  schedule:
+    # This will run every day at 9:00 AM UTC (convert to your desired time)
+    - cron: '0 9 * * *'
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  export-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up PHP
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      # Step 3: Install WP-CLI
+      - name: Install WP-CLI
+        run: |
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
+      # Step 4: Set up Git configuration
+      - name: Set up Git
+        run: |
+          git config --global user.name "Alvin-sabu"
+          git config --global user.email "alvinksabu200115@gmail.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git
+
+
+      # Step 5: Run the export-thirstylinks script
+      - name: Run export-thirstylinks script
+        run: |
+          wp export --post_type=thirstylink --filename_format=thirstylink-export.xml
+
+          # Check if the file exists and commit it if changes
+          if [[ -f thirstylink-export.xml ]]; then
+            git add thirstylink-export.xml
+            git commit -m "Updated ThirstyLinks XML file"
+            git push origin main
+          else
+            echo "No export file found"
+          fi
